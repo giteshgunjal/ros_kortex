@@ -10,6 +10,7 @@
     <arg name="x0" default="0"/>
     <arg name="y0" default="0"/>
     <arg name="z0" default="0"/>
+ 
 
     <!-- Arm type -->
     <arg name="arm" default="gen3"/>
@@ -24,6 +25,14 @@
     <arg name="robot_name" default="my_$(arg arm)"/>
     <arg name="prefix" default=""/>
     <arg name="cyclic_data_publish_rate" default="40"/> <!--Hz-->
+
+    <!-- Object parameters -->
+    <arg name="object" default="plastic_cyl"/>
+    <arg name="xobj" default="0.6"/>
+    <arg name="yobj" default="0"/>
+    <arg name="zobj" default="0"/>
+
+
 
     <!-- Gazebo parameters -->
     <arg name="use_sim_time" default="true"/>
@@ -78,6 +87,13 @@
                 -J $(arg prefix)joint_6 -1.00
                 -J $(arg prefix)joint_7 1.57"
         unless="$(eval not arg('gripper'))"/> <!--TODO-->
+
+        <!-- Spawn cylinder -->
+
+        <!-- <param name="cyl_description" command=" $(find kortex_description)/objects/$(arg object)/model.sdf"/> -->
+
+        <node name="cyl_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+        args="-file $(find kortex_description)/objects/$(arg object)/model.sdf -sdf -x $(arg xobj) -y $(arg yobj) -z $(arg zobj) -model $(arg object)"/>
 
         <!-- Load controller configuration file from kortex_control package -->
         <rosparam file="$(find kortex_control)/arms/$(arg arm)/$(arg dof)dof/config/joint_position_controllers.yaml" command="load" subst_value="true"/>
@@ -163,7 +179,7 @@
         </test> 
 
         <!-- Start RViz -->
-        <node name="rviz" pkg="rviz" type="rviz" if="$(arg start_rviz)"/> 
+        <!-- <node name="rviz" pkg="rviz" type="rviz" if="$(arg start_rviz)"/>  -->
     
     </group>
 

@@ -9,7 +9,7 @@ catkin_package()
 find_package(roslaunch)
 
 # Install
-foreach(dir arms grippers robots launch)
+foreach(dir arms grippers robots objects launch)
 	install(DIRECTORY ${dir}/
 		DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
 endforeach(dir)
