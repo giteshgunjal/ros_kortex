@@ -150,6 +150,8 @@ class KortexArmSimulation
     std::vector<std::string> m_gripper_joint_names;
     std::vector<float> m_gripper_joint_limits_max;
     std::vector<float> m_gripper_joint_limits_min;
+    std::vector<float> m_gripper_force_limits_max;
+    std::vector<float> m_gripper_force_limits_min;
     int m_degrees_of_freedom;
 
     // The indexes of the first arm joint and of the gripper joint in the "joint_states" feedback

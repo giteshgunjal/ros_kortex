@@ -105,6 +105,8 @@ KortexArmSimulation::KortexArmSimulation(ros::NodeHandle& node_handle): m_node_h
         }
         ros::param::get("~gripper_joint_limits_max", m_gripper_joint_limits_max);
         ros::param::get("~gripper_joint_limits_min", m_gripper_joint_limits_min);
+        ros::param::get("~gripper_force_limits_max", m_gripper_force_limits_max);
+        ros::param::get("~gripper_force_limits_min", m_gripper_force_limits_min);
     }
 
     // Print out simulation configuration
@@ -1584,15 +1586,31 @@ kortex_driver::KortexError KortexArmSimulation::ExecuteSendGripperCommand(const 
                                 "Error playing gripper command action : there must be exactly one finger");
     }
 
-    if (gripper_command.mode != kortex_driver::GripperMode::GRIPPER_POSITION)
+    // To allow GRIPPER_MODE::GRIPPER_FORCE
+    // if (gripper_command.mode != kortex_driver::GripperMode::GRIPPER_POSITION)
+    // {
+    //     return FillKortexError(kortex_driver::ErrorCodes::ERROR_DEVICE,
+    //                         kortex_driver::SubErrorCodes::UNSUPPORTED_ACTION,
+    //                         "Error playing gripper command action : gripper mode " + std::to_string(gripper_command.mode) + " is not supported; only position is.");
+    // }
+
+    // The incoming command is relative [0,1] and we need to put it in absolute unit [m_gripper_joint_limits_min[0], m_gripper_joint_limits_max[0]]:
+    double absolute_gripper_command;
+    if (gripper_command.mode == kortex_driver::GripperMode::GRIPPER_POSITION)
+    {
+        absolute_gripper_command = m_math_util.absolute_position_from_relative(gripper_command.gripper.finger[0].value, m_gripper_joint_limits_min[0], m_gripper_joint_limits_max[0]);
+    }
+    else if (gripper_command.mode == kortex_driver::GripperMode::GRIPPER_FORCE)
+    {
+        absolute_gripper_command = m_math_util.absolute_position_from_relative(gripper_command.gripper.finger[0].value, m_gripper_force_limits_min[0], m_gripper_force_limits_max[0]);
+    }
+    else
     {
         return FillKortexError(kortex_driver::ErrorCodes::ERROR_DEVICE,
                             kortex_driver::SubErrorCodes::UNSUPPORTED_ACTION,
                             "Error playing gripper command action : gripper mode " + std::to_string(gripper_command.mode) + " is not supported; only position is.");
-    }
-
-    // The incoming command is relative [0,1] and we need to put it in absolute unit [m_gripper_joint_limits_min[0], m_gripper_joint_limits_max[0]]:
-    double absolute_gripper_command = m_math_util.absolute_position_from_relative(gripper_command.gripper.finger[0].value, m_gripper_joint_limits_min[0], m_gripper_joint_limits_max[0]);
+    };
+    
 
     // Create the goal
     control_msgs::GripperCommandGoal goal;

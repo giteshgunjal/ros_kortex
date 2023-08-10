@@ -12,11 +12,13 @@
 
 #include "kortex_driver/non-generated/robotiq_gripper_command_action_server.h"
 
-RobotiqGripperCommandActionServer::RobotiqGripperCommandActionServer(const std::string& server_name, const std::string& gripper_joint_name, double gripper_joint_limit_min, double gripper_joint_limit_max, ros::NodeHandle& nh, Kinova::Api::Base::BaseClient* base, Kinova::Api::BaseCyclic::BaseCyclicClient* base_cyclic):
+RobotiqGripperCommandActionServer::RobotiqGripperCommandActionServer(const std::string& server_name, const std::string& gripper_joint_name, double gripper_joint_limit_min, double gripper_joint_limit_max,double gripper_force_limit_min, double gripper_force_limit_max, ros::NodeHandle& nh, Kinova::Api::Base::BaseClient* base, Kinova::Api::BaseCyclic::BaseCyclicClient* base_cyclic):
     m_server_name(server_name),
     m_gripper_joint_name(gripper_joint_name),
     m_gripper_joint_limit_min(gripper_joint_limit_min),
     m_gripper_joint_limit_max(gripper_joint_limit_max),
+    m_gripper_force_limit_min(gripper_force_limit_min),
+    m_gripper_force_limit_max(gripper_force_limit_max),
     m_node_handle(nh),
     m_server(nh, server_name, boost::bind(&RobotiqGripperCommandActionServer::goal_received_callback, this, _1), boost::bind(&RobotiqGripperCommandActionServer::preempt_received_callback, this, _1), false),
     m_base(base),
@@ -64,6 +66,7 @@ void RobotiqGripperCommandActionServer::goal_received_callback(actionlib::Action
     control_msgs::GripperCommand ros_gripper_command = m_goal.getGoal()->command;
     Kinova::Api::Base::GripperCommand proto_gripper_command;
 
+    //***** adapted for force control **********//
     proto_gripper_command.set_mode(Kinova::Api::Base::GripperMode::GRIPPER_POSITION);
     auto gripper = proto_gripper_command.mutable_gripper();
     // Position for a finger must be between relative (between 0 and 1), but position is absolute in the Goal coming from ROS
@@ -72,12 +75,14 @@ void RobotiqGripperCommandActionServer::goal_received_callback(actionlib::Action
     finger->set_finger_identifier(0);
     finger->set_value(relative_position);
     
+    //***** adapted for force control **********//
     // Send the gripper command to the robot
     m_base->SendGripperCommand(proto_gripper_command);
     m_is_trajectory_running_lock.lock();
     m_is_trajectory_running = true;
     m_is_trajectory_running_lock.unlock();
 
+    //***** adapted for force control **********//
     // Start the thread to monitor the position
     join_polling_thread();
     m_gripper_position_polling_thread = std::thread(&RobotiqGripperCommandActionServer::gripper_position_polling_thread, this);
@@ -106,6 +111,7 @@ void RobotiqGripperCommandActionServer::gripper_position_polling_thread()
     double previous_gripper_position = feedback.interconnect().gripper_feedback().motor(0).position() / 100.0; 
     double actual_gripper_position;
     int n_stuck = 0;
+    
 
     // Break the loop if the trajectory is not running or if the trajectory lasted more than the timeout limit
     while(m_is_trajectory_running && (std::chrono::duration<double>(now - m_trajectory_start_time).count() < GRIPPER_TRAJECTORY_TIME_LIMIT))

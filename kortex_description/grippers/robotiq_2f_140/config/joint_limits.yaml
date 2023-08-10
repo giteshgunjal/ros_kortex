@@ -6,3 +6,9 @@ gripper_joint_limits_min:
 
 gripper_joint_limits_max:
   - 0.700
+
+gripper_force_limits_min:
+  - 0.000
+
+gripper_force_limits_max:
+  - 75

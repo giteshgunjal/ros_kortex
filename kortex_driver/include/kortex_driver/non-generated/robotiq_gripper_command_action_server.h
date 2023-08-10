@@ -37,7 +37,7 @@ class RobotiqGripperCommandActionServer
 {
     public:
         RobotiqGripperCommandActionServer() = delete;
-        RobotiqGripperCommandActionServer(const std::string& server_name, const std::string& gripper_joint_name, double gripper_joint_limit_min, double gripper_joint_limit_max, ros::NodeHandle& nh, Kinova::Api::Base::BaseClient* base, Kinova::Api::BaseCyclic::BaseCyclicClient* base_cyclic);
+        RobotiqGripperCommandActionServer(const std::string& server_name, const std::string& gripper_joint_name, double gripper_joint_limit_min, double gripper_joint_limit_max,double gripper_force_limit_min, double gripper_force_limit_max, ros::NodeHandle& nh, Kinova::Api::Base::BaseClient* base, Kinova::Api::BaseCyclic::BaseCyclicClient* base_cyclic);
         ~RobotiqGripperCommandActionServer();
    
     private:
@@ -68,6 +68,8 @@ class RobotiqGripperCommandActionServer
         std::string m_gripper_joint_name;
         double      m_gripper_joint_limit_min;
         double      m_gripper_joint_limit_max;
+        double      m_gripper_force_limit_min;
+        double      m_gripper_force_limit_max;
 
         // Action Server Callbacks
         void goal_received_callback(actionlib::ActionServer<control_msgs::GripperCommandAction>::GoalHandle new_goal_handle);

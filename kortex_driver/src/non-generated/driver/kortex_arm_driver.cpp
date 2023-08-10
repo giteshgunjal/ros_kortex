@@ -271,6 +271,8 @@ void KortexArmDriver::parseRosArguments()
             ROS_ERROR("%s", error_string.c_str());
             throw new std::runtime_error(error_string);
         }
+        ros::param::get("~gripper_force_limits_max", m_gripper_force_limits_max);
+        ros::param::get("~gripper_force_limits_min", m_gripper_force_limits_min);
     }
 }
 
@@ -523,7 +525,7 @@ void KortexArmDriver::startActionServers()
     m_action_server_gripper_command = nullptr;
     if (isGripperPresent())
     {
-        m_action_server_gripper_command = new RobotiqGripperCommandActionServer(m_prefix + m_gripper_name + "_gripper_controller/gripper_cmd", m_gripper_joint_names[0], m_gripper_joint_limits_min[0], m_gripper_joint_limits_max[0], m_node_handle, m_base, m_base_cyclic);
+        m_action_server_gripper_command = new RobotiqGripperCommandActionServer(m_prefix + m_gripper_name + "_gripper_controller/gripper_cmd", m_gripper_joint_names[0], m_gripper_joint_limits_min[0], m_gripper_joint_limits_max[0],m_gripper_force_limits_min[0], m_gripper_force_limits_max[0], m_node_handle, m_base, m_base_cyclic);
     }
 }
 
@@ -649,6 +651,8 @@ void KortexArmDriver::publishRobotFeedback()
         joint_state.velocity.resize(base_feedback.actuators.size() + base_feedback.interconnect.oneof_tool_feedback.gripper_feedback[0].motor.size());
         joint_state.effort.resize(base_feedback.actuators.size() + base_feedback.interconnect.oneof_tool_feedback.gripper_feedback[0].motor.size());
         joint_state.header.stamp = ros::Time::now();
+
+        std::cout<<"--------------"<<std::endl<<base_feedback.interconnect.oneof_tool_feedback.gripper_feedback[0].motor.size()<<"THIS IS the feedback";
 
         for (int i = 0; i < base_feedback.actuators.size(); i++)
         {

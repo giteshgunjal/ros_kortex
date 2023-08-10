@@ -45,7 +45,9 @@ import time
 import rospy
 import moveit_commander
 import moveit_msgs.msg
-import geometry_msgs.msg
+import shape_msgs.msg
+from  geometry_msgs.msg import Quaternion, Pose
+from tf.transformations import *
 from math import pi
 from std_srvs.srv import Empty
 
@@ -175,7 +177,7 @@ class ExampleMoveItTrajectories(object):
     gripper_min_absolute_pos = gripper_joint.min_bound()
     try:
       val = gripper_joint.move(relative_position * (gripper_max_absolute_pos - gripper_min_absolute_pos) + gripper_min_absolute_pos, True)
-      return True
+      return val
     except:
       return False 
 
@@ -213,36 +215,93 @@ def main():
     rospy.loginfo("Reach Cartesian Pose with constraints...")
     # Get actual pose
     actual_pose = example.get_cartesian_pose()
-    actual_pose.position.x = 0.61
-    actual_pose.position.z = 0.06
+    actual_pose.position.x = 0.59
+    actual_pose.position.z = 0.05
+
+    q_curr =  [actual_pose.orientation.x,actual_pose.orientation.y,actual_pose.orientation.z,actual_pose.orientation.w]
+    q_rot = quaternion_from_euler(0, pi/2, 0)
+    q_new = quaternion_multiply(q_rot,q_curr)
+
+  
+    orientation = Quaternion(q_new[0], q_new[1], q_new[2], q_new[3])
+    actual_pose.orientation = orientation
+    
+
+
+
     
     # Orientation constraint (we want the end effector to stay the same orientation)
     constraints = moveit_msgs.msg.Constraints()
     orientation_constraint = moveit_msgs.msg.OrientationConstraint()
+    
     orientation_constraint.orientation = actual_pose.orientation
+    orientation_constraint.absolute_x_axis_tolerance = 0.05
+    orientation_constraint.absolute_y_axis_tolerance = 0.05
+    orientation_constraint.absolute_z_axis_tolerance = 0.05
+    orientation_constraint.weight =1
     constraints.orientation_constraints.append(orientation_constraint)
 
     # Send the goal
-    success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=constraints)
+    success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.005, constraints=constraints)
 
   if example.is_gripper_present and success:
 
     rospy.loginfo("Closing the gripper 100%...")
-    success &= example.reach_gripper_position(1)
+    success &= example.reach_gripper_position(0.8)
     print (success)
 
-  if success:
+    # target_pose = example.get_cartesian_pose()
+    # target_pose.position.z  = 0.053
+    # # target_pose.position.y += 0.3
+
+    # success &= example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
+
+  if success or not success:
     rospy.loginfo("Reach Cartesian Pose with constraints...")
   # Get actual pose
-    actual_pose = example.get_cartesian_pose()
-    actual_pose.position.z += 0.3
+    target_pose = example.get_cartesian_pose()
+    target_pose.position.z  = 0.053
+    target_pose.position.y += 0.3
+    
+
+    # constraint plane
+    plane_constraint = moveit_msgs.msg.PositionConstraint()
+    
+    plane = shape_msgs.msg.SolidPrimitive()
+    plane.type = 1
+    plane.dimensions = [1.0, 1.0, 0.0005 ]
+    plane_constraint.constraint_region.primitives.append(plane)
+
+    plane_pose =Pose() 
+    plane_pose.position.x = target_pose.position.x
+    plane_pose.position.y = 0.
+    plane_pose.position.z = target_pose.position.z 
+    plane_pose.orientation.x = 0
+    plane_pose.orientation.y = 0.0
+    plane_pose.orientation.z = 0.0
+    plane_pose.orientation.w = 1.
+    plane_constraint.constraint_region.primitive_poses.append(plane_pose)
+    plane_constraint.weight = 1.0
+
+
+    constraints.position_constraints.append(plane_constraint)
+    constraints.name = "use_equality_constraints"
+    # Send the goal
+    success = example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
+    
+  if success :
+    rospy.loginfo("Reach Cartesian Pose with constraints...")
+  # Get actual pose
+    # actual_pose = example.get_cartesian_pose()
+    target_pose.position.y -= 0.6
     
     # Send the goal
-    success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=constraints)
+    success &= example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
+
 
 
       # For testing purposes
-    rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)
+    # rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)?
 
   if not success:
       rospy.logerr("The example encountered an error.")
