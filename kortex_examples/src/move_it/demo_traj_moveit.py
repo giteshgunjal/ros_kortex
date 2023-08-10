@@ -140,6 +140,45 @@ class ExampleMoveItTrajectories(object):
     rospy.loginfo("Printing current joint positions after movement :")
     for p in new_joint_positions: rospy.loginfo(p)
     return success
+  
+  def home_robot(self, tolerance):
+    arm_group = self.arm_group
+    success = True
+
+    # Get the current joint positions
+    joint_positions = arm_group.get_current_joint_values()
+    rospy.loginfo("Printing current joint positions before movement :")
+    for p in joint_positions: rospy.loginfo(p)
+
+    # Set the goal joint tolerance
+    self.arm_group.set_goal_joint_tolerance(tolerance)
+
+    # Set the joint target configuration
+    if self.degrees_of_freedom == 7:
+      joint_positions[0] = pi/2
+      joint_positions[1] = 0
+      joint_positions[2] = pi/4
+      joint_positions[3] = -pi/4
+      joint_positions[4] = 0
+      joint_positions[5] = pi/2
+      joint_positions[6] = 0.2
+    elif self.degrees_of_freedom == 6:
+      joint_positions[0] = 0
+      joint_positions[1] = 0
+      joint_positions[2] = pi/2
+      joint_positions[3] = pi/4
+      joint_positions[4] = 0
+      joint_positions[5] = pi/2
+    arm_group.set_joint_value_target(joint_positions)
+    
+    # Plan and execute in one command
+    success &= arm_group.go(wait=True)
+
+    # Show joint positions after movement
+    new_joint_positions = arm_group.get_current_joint_values()
+    rospy.loginfo("Printing current joint positions after movement :")
+    for p in new_joint_positions: rospy.loginfo(p)
+    return success
 
   def get_cartesian_pose(self):
     arm_group = self.arm_group
@@ -247,7 +286,7 @@ def main():
   if example.is_gripper_present and success:
 
     rospy.loginfo("Closing the gripper 100%...")
-    success &= example.reach_gripper_position(0.8)
+    success &= example.reach_gripper_position(0.5)
     print (success)
 
     # target_pose = example.get_cartesian_pose()
@@ -256,7 +295,7 @@ def main():
 
     # success &= example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
 
-  if success or not success:
+  if success:
     rospy.loginfo("Reach Cartesian Pose with constraints...")
   # Get actual pose
     target_pose = example.get_cartesian_pose()
@@ -287,7 +326,7 @@ def main():
     constraints.position_constraints.append(plane_constraint)
     constraints.name = "use_equality_constraints"
     # Send the goal
-    success = example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
+    success &= example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
     
   if success :
     rospy.loginfo("Reach Cartesian Pose with constraints...")
@@ -297,6 +336,18 @@ def main():
     
     # Send the goal
     success &= example.reach_cartesian_pose(pose=target_pose, tolerance=0.002, constraints=constraints)
+
+
+  if example.is_gripper_present :
+    rospy.loginfo("Opening the gripper...")
+    success = example.reach_gripper_position(0)
+    print (success)
+
+
+  
+    rospy.loginfo("Reaching Named Target Home...")
+    success &= example.reach_named_position("home")
+    print (success)
 
 
 
